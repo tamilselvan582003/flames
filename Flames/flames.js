@@ -1,151 +1,120 @@
+function check(name)
+{
+	let new_name = name.value;
 
-import os, sys
-import re
-import json
-import sqlite3
-import tempfile
-from typing import Dict, Any
-
-import pandas as pd
-import streamlit as st
-from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
-from httpx import Client as HTTPClient  # For `clients` instance
-
-tiktoken_cache_dir = "./tiktoken_cache"
-os.environ["TIKTOKEN_CACHE_DIR"] = tiktoken_cache_dir
-
-load_dotenv()
-
-API_KEY = os.getenv("API_KEY", "")
-if not API_KEY:
-    st.error("Please set API_KEY in your .env file.")
-    st.stop()
-
-os.environ["STREAMLIT_WATCHER_TYPE"] = "none"
-sys.modules["torch.classes"] = None 
-
-# Create reusable http client
-clients = HTTPClient(timeout=60.0, verify=False)
-
-# Initialize ChatOpenAI using TCS GenAI endpoint
-llm = ChatOpenAI(
-    base_url="https://genailab.tcs.in",
-    model="azure/genailab-maas-gpt-4.1-mini",
-    api_key=API_KEY,
-    http_client=clients
-)
-
-st.set_page_config(page_title="Retail Inventory Chatbot", page_icon="🛒")
-
-
-SCHEMA_TEXT = """
-    You have access to a SQLite database with a single table:
-
-    Table: inventory
-    Columns:
-    - ProductID VARCHAR(10)
-    - ProductName VARCHAR(30)
-    - StockLevel INTEGER
-    - ReorderThreshold INTEGER
-    - Cost_INR INTEGER
-    - LocationID VARCHAR(30)
-
-    Business rules:
-    - Low stock: StockLevel < ReorderThreshold
-    - Reorder quantity (simple rule): reorder_qty = ReorderThreshold - StockLevel
-    - Reorder recommendation should be with detailed explaination
-    - Only generate safe, read-only SQL. STRICTLY SELECT queries.
-    - Always include column names in SELECT and keep it succinct.
-    """
-
-SYSTEM_INSTRUCTIONS = f"""
-    You are a Retail Inventory AI. 
-    Goal: Convert natural language queries into a single, safe SELECT SQL for the schema below,
-    and return a compact JSON plan. DO NOT execute SQL yourself.
-
-    {SCHEMA_TEXT}
-
-    Return ONLY valid JSON with this schema:
-    {{
-    "sql": "<SELECT statement>",
-    "purpose": "<one-liner of what the SQL retrieves>",
-    "fields_needed": ["list","of","columns"],
-    "filters": "<human-friendly filter summary>"
-    }}
-
-    Rules:
-    - Absolutely no INSERT/UPDATE/DELETE/PRAGMA/ATTACH/CREATE/DROP/ALTER/TRUNCATE.
-    - No multiple statements. One SELECT only.
-    - If the best response needs no SQL (pure reasoning), still return a SELECT that inspects inventory (e.g., Summary stock).
-    - Prefer TOP-level aggregates only when asked (SUM/AVG/etc).
-    - Use LIKE for fuzzy name searches when the user is unsure (e.g., ProductName LIKE '%shirt%').
-    - Output must contain valid and correct numbers as present in the database. 
-
-    Output Guidelines:
-    - Output should be valid and correct numbers as present in the database.
-    - Output should not contain any false information which are not present in the database.
-    """
-
-USER_HELP = """
-    Example queries:
-    - "Show inventory summary"
-    - "Which products need reordering?"
-    - "Reorder recommendations"
-    - "Show an alert for the products which are of Low stock"
-    """
-
-REQUIRED_COLS = [
-    "ProductID",
-    "ProductName",
-    "StockLevel",
-    "ReorderThreshold",
-    "Cost_INR",
-    "LocationID"
-]
-
-COLUMN_ALIASES = {
-    "ProductID": ["productid", "sku", "item_code", "product_code"],
-    "ProductName": ["productname", "name", "item_name", "product_title"],
-    "StockLevel": ["stocklevel", "stock_qty", "quantity", "on_hand", "qty"],
-    "ReorderThreshold": ["reorderthreshold", "reorder_point", "rop", "reorderlevel"],
-    "Cost_INR": ["cost_inr", "price", "cost", "unit_cost", "cost_price"],
-    "LocationID": ["locationid", "location", "store_id", "warehouse", "branch"]
+            	if(!isNaN(new_name))
+            	{
+            		new_name = new_name.substring(0,(new_name.length-1));
+            		name.value = new_name;
+            	}
 }
+function calc()
+{
+	let fname = document.getElementById('yname').value;
+	let sname = document.getElementById('pname').value;
+	if (fname=='') {
+		alert("Enter First Name");
+	}
+	else if (sname=='') {
+		alert("Enter Second Name");
+	}
 
-def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
-    df.columns = (
-        df.columns
-        .str.strip()
-        .str.lower()
-        .str.replace(r"[^a-z0-9]+", "_", regex=True)
-        .str.strip("_")
-    )
+    let r = /\s+/g;
+    let orfirst = document.first.name.value.toUpperCase();
+    let nam=orfirst;
+    orfirst = orfirst.replace(r,"");
+    if(orfirst!="")
+    {
+			let count = 0;
+            let first = orfirst;
+            second = eval("document.first.name"+1).value.toUpperCase();
+            let names=second;
+            second = second.replace(r,"");
+            if(second != "")
+            {
+                document.getElementById("result").style.display = 'block';
+                    for(let i=0; i<first.length; i++)
+                    {
+                            for(let j=0; j<second.length; j++)
+                            {
+                                    if(first[i] == second[j])
+                                    {
+                                            let a1 = first.substring(0,i);
+                                            let a2 = first.substring(i+1,first.length);
+                                            first = a1+a2;
+                                            i=-1;
+                                            let b1 = second.substring(0,j);
+                                            let b2 = second.substring(j+1,second.length);
+                                            second = b1+b2;
+                                            j=-1;
+                                            break;
+                                    }
+                            }
+                    }
 
-    alias_to_key = {}
-    for key, aliases in COLUMN_ALIASES.items():
-        for a in aliases:
-            alias_to_key[a] = key.lower()
+                    var ss=(first+second);
+                    var l=ss.length;
+                    var ar = new Array("F", "L", "A", "M", "E", "S");
+                    var stp=1;
 
-    rename_map = {}
-    for col in df.columns:
-        if col in alias_to_key:
-            rename_map[col] = alias_to_key[col]
-    df = df.rename(columns=rename_map)
+                    for(var x=6; x>1; x--)
+                    {
+                            var g=((l%x)+stp)-1;
+                            if(g>x)
+                            {
+                                    g=g%x;
+                            }
+                            if(g==0)
+                            {
+                                    g=ar.length;
+                            }
+                            ar.splice(g-1,1);
+                            stp=g;
+                    }
 
-    for col in REQUIRED_COLS:
-        if col.lower() not in df.columns:
-            df[col.lower()] = ""
+                    if(ar=="F")
+                    {
+							document.getElementById("display_flame").innerHTML = 'FRIENDS &#9996';
+							document.getElementById("display_flame").style.color='red';
 
-    df = df[[c.lower() for c in REQUIRED_COLS]]
-    df.columns = REQUIRED_COLS
-
-    df["StockLevel"] = pd.to_numeric(df["StockLevel"], errors="coerce").fillna(0).astype(int)
-    df["ReorderThreshold"] = pd.to_numeric(df["ReorderThreshold"], errors="coerce").fillna(0).astype(int)
-    df["Cost_INR"] = pd.to_numeric(df["Cost_INR"], errors="coerce").fillna(0).astype(int)
-    df["ProductID"] = df["ProductID"].astype(str).fillna("").str.strip()
-    df["ProductName"] = df["ProductName"].astype(str).fillna("").str.strip()
+                    }
+                    else if(ar=="L")
+                    {
+							document.getElementById("display_flame").innerHTML = 'LOVER &#128151';
+							document.getElementById("display_flame").style.color='red';
+                    }
+                    else if(ar=="A")
+                    {
+                            
+							document.getElementById("display_flame").innerHTML = 'AFFECTION &#128516';
+							document.getElementById("display_flame").style.color='red';
+                    }
+                    else if(ar=="M")
+                    {
+                            
+							document.getElementById("display_flame").innerHTML = 'MARRIAGE &#128107';
+							document.getElementById("display_flame").style.color='red';
+                    }
+                    else if(ar=="E")
+                    {
+                            
+							document.getElementById("display_flame").innerHTML = 'ENEMY &#128545';
+							document.getElementById("display_flame").style.color='red';
+                    }
+                    else if(ar=="S")
+                    {
+							document.getElementById("display_flame").innerHTML = 'SISTER &#127752';
+							document.getElementById("display_flame").style.color='red';
+                    }
+                    document.getElementById("nam"+1).style.display = 'block';
+                    document.getElementById("nam"+1).textContent= "Relationship status of " +nam + " & " +names+ " is :";
+            }
+    }
+    else
+    {
+            return false;
+    }
+}    df["ProductName"] = df["ProductName"].astype(str).fillna("").str.strip()
     df["LocationID"] = df["LocationID"].astype(str).fillna("").str.strip()
     return df
 
